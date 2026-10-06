@@ -9,6 +9,7 @@ void main() {
 
 // ═════════════════════════ THEME & COLOUR SYSTEM ═════════════════════════
 // Primary : kPri (royal blue)   Accent : kAcc (coral)
+// Field fill : Pal.fill         Success : Pal.ok (green)   Error : Pal.err (red)
 // Tints   : Pal.soft (blue tint) and Pal.alt (light grey-blue section background)
 // Card style: radius kRadius, subtle shadow, 1px border, rounded tinted icons.
 final ValueNotifier<ThemeMode> themeMode = ValueNotifier(ThemeMode.light);
@@ -18,6 +19,7 @@ const kAcc = Color(0xFFFF6B4A);
 const kNavy = Color(0xFF0A1A4A);
 const kNavRed = Color(0xFFA51C30); // active colour of the bottom navigation bar
 const double kRadius = 22;
+const double kFieldRadius = 14; // one radius for every input, chip and button
 
 class Pal {
   final bool dark;
@@ -32,6 +34,10 @@ class Pal {
   Color get soft => dark ? const Color(0xFF1A2447) : const Color(0xFFEAF0FF);
   Color get main => dark ? const Color(0xFF7FA0FF) : kPri;
   Color get navActive => dark ? const Color(0xFFFF7A8A) : kNavRed;
+  // Form colours: readable in both light and dark mode.
+  Color get fill => dark ? const Color(0xFF1B2340) : const Color(0xFFF3F6FF);
+  Color get ok => dark ? const Color(0xFF4ADE80) : const Color(0xFF15803D);
+  Color get err => dark ? const Color(0xFFFF8A80) : const Color(0xFFC62828);
 }
 
 ThemeData buildTheme(bool dark) => ThemeData(
@@ -67,6 +73,8 @@ BoxDecoration cardBox(Pal p, {double r = kRadius}) => BoxDecoration(
 // ═════════════════════════ DATA ═════════════════════════
 const kName = 'Navadeep';
 const kId = 'STU2024-1082';
+const kEmail = 'navadeep@student.campuspulse.edu';
+const kEmailDomain = '@student.campuspulse.edu';
 const kProgram = 'B.Sc. Computer Science • Year 2';
 const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
@@ -116,7 +124,7 @@ const services = <Svc>[
   Svc('Library', 'Books & rooms', Icons.local_library_rounded, Color(0xFFF59E0B), 'Open 8:00 AM – 10:00 PM. You have 2 books due in 3 days. Group study rooms can be booked online.', 'Open'),
   Svc('Shuttle', 'Campus bus', Icons.directions_bus_rounded, Color(0xFF8B5CF6), 'Route A runs every 15 minutes. Route B is about 10 minutes late today. Next bus from Gate A at 10:25 AM.', 'On time'),
   Svc('Clubs', 'Activities', Icons.groups_rounded, Color(0xFFEF4444), 'You joined the Coding Club and the Photography Society. Next meeting: Thursday, 5:00 PM, Room 3.'),
-  Svc('Helpdesk', 'Get support', Icons.support_agent_rounded, Color(0xFF64748B), 'Email help@campuspulse.edu or visit Admin Block, Level 1 (9:00 AM – 5:00 PM).', 'Available'),
+  Svc('Helpdesk', 'Get support', Icons.support_agent_rounded, Color(0xFF64748B), 'Email help@campuspulse.edu or visit Admin Block, Level 1 (9:00 AM – 5:00 PM). You can also send a service request from the Request tab.', 'Available'),
 ];
 
 int todayIdx() {
@@ -289,7 +297,7 @@ class SecHead extends StatelessWidget {
   }
 }
 
-/// Banner used at the top of the Events, Campus and Profile pages.
+/// Banner used at the top of the Events, Campus, Request and Profile pages.
 class PageBanner extends StatelessWidget {
   final String eyebrow, title, sub;
   final IconData icon;
@@ -520,7 +528,7 @@ class AppShell extends StatefulWidget {
 }
 
 class _AppShellState extends State<AppShell> {
-  static const nav = ['Home', 'Events', 'Campus', 'Profile'];
+  static const nav = ['Home', 'Events', 'Campus', 'Request', 'Profile'];
   int tab = 0, selected = -1;
   final Set<int> going = {};
 
@@ -561,10 +569,12 @@ class _AppShellState extends State<AppShell> {
           Expanded(
             child: SafeArea(
               top: false,
+              // IndexedStack keeps every page alive, so a half-filled request form survives tab switches.
               child: IndexedStack(index: tab, children: [
                 HomePage(c: c),
                 EventsPage(c: c),
                 CampusPage(c: c),
+                RequestPage(c: c),
                 ProfilePage(c: c),
               ]),
             ),
@@ -574,7 +584,7 @@ class _AppShellState extends State<AppShell> {
     );
   }
 
-  // Bottom navigation bar (Home • Events • Campus • Profile)
+  // Bottom navigation bar (Home • Events • Campus • Request • Profile)
   Widget _bottomBar(Pal p) => Container(
     decoration: BoxDecoration(
       color: p.card,
@@ -596,6 +606,7 @@ class _AppShellState extends State<AppShell> {
         BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home_rounded), label: 'Home'),
         BottomNavigationBarItem(icon: Icon(Icons.event_outlined), activeIcon: Icon(Icons.event_rounded), label: 'Events'),
         BottomNavigationBarItem(icon: Icon(Icons.map_outlined), activeIcon: Icon(Icons.map_rounded), label: 'Campus'),
+        BottomNavigationBarItem(icon: Icon(Icons.edit_note_outlined), activeIcon: Icon(Icons.edit_note_rounded), label: 'Request'),
         BottomNavigationBarItem(icon: Icon(Icons.person_outline_rounded), activeIcon: Icon(Icons.person_rounded), label: 'Profile'),
       ],
     ),
@@ -644,14 +655,15 @@ class _AppShellState extends State<AppShell> {
             ],
             const Spacer(),
             IconButton(
+              tooltip: p.dark ? 'Switch to light mode' : 'Switch to dark mode',
               onPressed: () => themeMode.value = p.dark ? ThemeMode.light : ThemeMode.dark,
               icon: Icon(p.dark ? Icons.light_mode_outlined : Icons.dark_mode_outlined),
             ),
             Stack(alignment: Alignment.center, children: [
-              IconButton(onPressed: () => _snack('You have 3 new notifications'), icon: const Icon(Icons.notifications_none_rounded)),
+              IconButton(tooltip: 'Notifications', onPressed: () => _snack('You have 3 new notifications'), icon: const Icon(Icons.notifications_none_rounded)),
               Positioned(top: 12, right: 12, child: Container(width: 9, height: 9, decoration: BoxDecoration(color: kAcc, shape: BoxShape.circle, border: Border.all(color: p.card, width: 1.5)))),
             ]),
-            GestureDetector(onTap: () => _go(3), child: const Padding(padding: EdgeInsets.only(left: 4, right: 4), child: Avatar(40))),
+            GestureDetector(onTap: () => _go(4), child: const Padding(padding: EdgeInsets.only(left: 4, right: 4), child: Avatar(40))),
           ]),
         ),
       ),
@@ -706,6 +718,12 @@ class HomePage extends StatelessWidget {
           style: OutlinedButton.styleFrom(minimumSize: const Size(0, 52), padding: const EdgeInsets.symmetric(horizontal: 26), side: const BorderSide(color: Colors.white70), shape: const StadiumBorder()),
           onPressed: () => c.go(1),
           child: const Text('View events', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15)),
+        ),
+        OutlinedButton.icon(
+          style: OutlinedButton.styleFrom(minimumSize: const Size(0, 52), padding: const EdgeInsets.symmetric(horizontal: 26), side: const BorderSide(color: Colors.white70), shape: const StadiumBorder()),
+          onPressed: () => c.go(3),
+          icon: const Icon(Icons.edit_note_rounded, color: Colors.white),
+          label: const Text('Request a service', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15)),
         ),
       ]),
     ]);
@@ -927,7 +945,8 @@ class HomePage extends StatelessWidget {
       link('Home', () => c.go(0)),
       link('Events', () => c.go(1)),
       link('Campus', () => c.go(2)),
-      link('Profile', () => c.go(3)),
+      link('Request', () => c.go(3)),
+      link('Profile', () => c.go(4)),
     ]);
     final contact = col('Contact', [
       link('help@campuspulse.edu', () => c.snack('help@campuspulse.edu')),
@@ -959,7 +978,7 @@ class HomePage extends StatelessWidget {
                 ),
                 FilledButton(
                   style: FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: kPri, minimumSize: const Size(180, 52), shape: const StadiumBorder()),
-                  onPressed: () => c.snack('Connecting you to the Helpdesk…'),
+                  onPressed: () => c.go(3), // opens the service request form
                   child: const Text('Contact Helpdesk', style: TextStyle(fontWeight: FontWeight.w800)),
                 ),
               ]),
@@ -1156,7 +1175,1124 @@ class _CampusPageState extends State<CampusPage> {
   }
 }
 
-// ═════════════════════════ PAGE 4: PROFILE ═════════════════════════
+// ═════════════════════════════════════════════════════════════════════════════
+// PAGE 4: SERVICE REQUEST FORM  (Flutter Form project)
+// ─────────────────────────────────────────────────────────────────────────────
+// App & form name : Campus Pulse • "Service Request Desk"
+// Colours         : primary kPri (blue), accent kAcc (coral), field fill Pal.fill,
+//                   success Pal.ok (green), error Pal.err (red)
+// Purpose         : students contact campus service units (advising, IT, library,
+//                   finance, facilities, counselling).
+// Advanced choices (3 required, 6 delivered):
+//   1. Conditional extra field that appears for the chosen service category
+//   2. Live character counters with maximum lengths (subject + description)
+//   3. Reusable CampusTextField / CampusDropdown / ChipGroupField widgets
+//   4. Progress indicator showing completion of the required fields
+//   5. Submission summary dialog with a request reference + recent requests list
+//   6. Mock attachment selector that shows the chosen file name
+//   (the app-wide light/dark switch is also kept readable on every field state)
+// ═════════════════════════════════════════════════════════════════════════════
+
+// ───────────── Sample choices ─────────────
+class ServiceCat {
+  final String name;
+  final IconData icon;
+  final String extraLabel, extraHint; // empty = no extra field for this category
+  const ServiceCat(this.name, this.icon, this.extraLabel, this.extraHint);
+}
+
+const serviceCats = <ServiceCat>[
+  ServiceCat('Academic Advising', Icons.school_rounded, 'Course code', 'e.g. CS2014'),
+  ServiceCat('IT Helpdesk', Icons.computer_rounded, 'System or device affected', 'e.g. Wi-Fi, student portal, Lab 3 PC'),
+  ServiceCat('Library Services', Icons.local_library_rounded, 'Book title or study room', 'e.g. Group Study Room 4'),
+  ServiceCat('Fees & Finance', Icons.account_balance_wallet_rounded, 'Invoice or receipt number', 'e.g. INV-2026-0412'),
+  ServiceCat('Facilities & Maintenance', Icons.build_circle_rounded, 'Room or location', 'e.g. Block A, Level 2, Room 5'),
+  ServiceCat('Counselling & Wellbeing', Icons.favorite_rounded, '', ''),
+];
+
+class ChipOpt {
+  final String label;
+  final IconData icon;
+  final Color color;
+  const ChipOpt(this.label, this.icon, this.color);
+}
+
+const urgencyOpts = <ChipOpt>[
+  ChipOpt('Low • within 7 days', Icons.flag_outlined, Color(0xFF16A34A)),
+  ChipOpt('Medium • within 3 days', Icons.flag_rounded, Color(0xFFD97706)),
+  ChipOpt('High • within 24 hours', Icons.priority_high_rounded, Color(0xFFEA580C)),
+  ChipOpt('Urgent • today', Icons.warning_amber_rounded, Color(0xFFDC2626)),
+];
+
+const contactOpts = <ChipOpt>[
+  ChipOpt('Campus email', Icons.mail_outline_rounded, kPri),
+  ChipOpt('Phone call', Icons.call_outlined, kPri),
+  ChipOpt('Text message', Icons.sms_outlined, kPri),
+  ChipOpt('Visit in person', Icons.place_outlined, kPri),
+];
+
+const sampleFiles = <String>['wifi_error_screenshot.png', 'fee_receipt_oct.pdf', 'timetable_clash.jpg', 'medical_certificate.pdf'];
+
+// ───────────── Validators (one per field, specific & helpful messages) ─────────────
+// Each validator returns null when the value is valid, otherwise the message shown
+// beside the field. They are plain functions so the progress bar can reuse them.
+String? vName(String? v) {
+  final t = (v ?? '').trim();
+  if (t.isEmpty) return 'Please enter your name as it appears on your student card.';
+  if (t.length < 3) return 'Your name looks too short. Use at least 3 characters.';
+  if (!RegExp(r"^[A-Za-z][A-Za-z .'\-]*$").hasMatch(t)) return 'Use letters only (spaces, . \' and - are fine).';
+  return null;
+}
+
+String? vStudentId(String? v) {
+  final t = (v ?? '').trim();
+  if (t.isEmpty) return 'Please enter your student ID.';
+  if (!RegExp(r'^STU\d{4}-\d{4}$').hasMatch(t)) return 'Use the format STU2024-1082 (STU + year, a dash, then 4 digits).';
+  return null;
+}
+
+String? vEmail(String? v) {
+  final t = (v ?? '').trim().toLowerCase();
+  if (t.isEmpty) return 'Please enter your campus email.';
+  if (!RegExp(r'^[a-z0-9._+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$').hasMatch(t)) return 'That email looks incomplete. Example: name$kEmailDomain';
+  if (!t.endsWith(kEmailDomain)) return 'Please use your campus email ending in $kEmailDomain';
+  return null;
+}
+
+String? vPhone(String? v) {
+  final t = (v ?? '').trim();
+  if (t.isEmpty) return null; // optional field
+  final digits = t.replaceAll(RegExp(r'[\s\-]'), '');
+  if (!RegExp(r'^\+?\d{9,13}$').hasMatch(digits)) return 'Use 9 to 13 digits with an optional leading +. Example: +60 12-345 6789';
+  return null;
+}
+
+String? vCategory(String? v) => v == null ? 'Please choose the campus service you need.' : null;
+
+String? vSubject(String? v) {
+  final t = (v ?? '').trim();
+  if (t.isEmpty) return 'Add a short subject so staff know what this is about.';
+  if (t.length < 8) return 'Please be a little more specific (at least 8 characters).';
+  return null;
+}
+
+String? vDescription(String? v) {
+  final t = (v ?? '').trim();
+  if (t.isEmpty) return 'Please describe your request.';
+  if (t.length < 20) return 'Add more detail: at least 20 characters (${t.length} so far).';
+  if (t.length > 300) return 'Please keep the description under 300 characters.';
+  return null;
+}
+
+String? vUrgency(String? v) => v == null ? 'Please choose how urgent this request is.' : null;
+String? vContact(String? v) => v == null ? 'Please choose how we should reach you.' : null;
+
+DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
+
+String? vDate(DateTime? v) {
+  if (v == null) return 'Please pick a preferred appointment or reply date.';
+  if (_dateOnly(v).isBefore(_dateOnly(DateTime.now()))) return 'That date has already passed. Choose today or a later date.';
+  if (v.weekday > 5) return 'Campus offices are closed at weekends. Pick Monday to Friday.';
+  return null;
+}
+
+String? vDeclaration(bool? v) => v == true ? null : 'You must tick the declaration before submitting.';
+
+String fmtDate(DateTime d) {
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return '${days[d.weekday - 1]}, ${d.day} ${months[d.month - 1]} ${d.year}';
+}
+
+// ───────────── Reusable input styling & widgets ─────────────
+/// One decoration for every field: floating label always visible, fill colour,
+/// rounded borders, blue focus ring, red error border + readable error text.
+InputDecoration campusDecoration(Pal p, {required String label, String? hint, String? helper, IconData? icon, Widget? counter}) {
+  OutlineInputBorder border(Color c, [double w = 1]) =>
+      OutlineInputBorder(borderRadius: BorderRadius.circular(kFieldRadius), borderSide: BorderSide(color: c, width: w));
+  return InputDecoration(
+    labelText: label,
+    hintText: hint,
+    helperText: helper,
+    helperMaxLines: 2,
+    counter: counter,
+    filled: true,
+    fillColor: p.fill,
+    floatingLabelBehavior: FloatingLabelBehavior.always,
+    labelStyle: TextStyle(color: p.sub, fontWeight: FontWeight.w600, fontSize: 15),
+    floatingLabelStyle: TextStyle(color: p.main, fontWeight: FontWeight.w700, fontSize: 15),
+    hintStyle: TextStyle(color: p.sub.withOpacity(.75), fontSize: 15),
+    helperStyle: TextStyle(color: p.sub, fontSize: 12.5),
+    errorStyle: TextStyle(color: p.err, fontWeight: FontWeight.w600, fontSize: 12.5, height: 1.3),
+    errorMaxLines: 3,
+    prefixIcon: icon == null ? null : Icon(icon, color: p.sub),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+    border: border(p.line),
+    enabledBorder: border(p.line),
+    focusedBorder: border(p.main, 2),
+    errorBorder: border(p.err, 1.5),
+    focusedErrorBorder: border(p.err, 2),
+  );
+}
+
+/// Reusable text field (constructor parameters control label, hint, icon, keyboard,
+/// validation, saving, length limit + live counter).
+class CampusTextField extends StatelessWidget {
+  final TextEditingController controller;
+  final String label;
+  final String? hint, helper;
+  final IconData icon;
+  final String? Function(String?) validator;
+  final FormFieldSetter<String> onSaved;
+  final TextInputType keyboardType;
+  final TextInputAction textInputAction;
+  final TextCapitalization capitalization;
+  final List<TextInputFormatter> formatters;
+  final int minLines, maxLines;
+  final int? maxChars; // when set: enforces the limit and shows a live counter
+  final bool autocorrect;
+
+  const CampusTextField({
+    super.key,
+    required this.controller,
+    required this.label,
+    required this.icon,
+    required this.validator,
+    required this.onSaved,
+    this.hint,
+    this.helper,
+    this.keyboardType = TextInputType.text,
+    this.textInputAction = TextInputAction.next,
+    this.capitalization = TextCapitalization.none,
+    this.formatters = const [],
+    this.minLines = 1,
+    this.maxLines = 1,
+    this.maxChars,
+    this.autocorrect = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final p = Pal.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: TextFormField(
+        controller: controller,
+        validator: validator,
+        onSaved: onSaved,
+        keyboardType: keyboardType,
+        textInputAction: textInputAction,
+        textCapitalization: capitalization,
+        autocorrect: autocorrect,
+        minLines: minLines,
+        maxLines: maxLines,
+        style: TextStyle(fontSize: 16, color: p.text),
+        inputFormatters: [
+          ...formatters,
+          if (maxChars != null) LengthLimitingTextInputFormatter(maxChars),
+        ],
+        decoration: campusDecoration(
+          p,
+          label: label,
+          hint: hint,
+          helper: helper,
+          icon: icon,
+          // Live character counter (advanced option): rebuilds on every keystroke.
+          counter: maxChars == null
+              ? null
+              : ValueListenableBuilder<TextEditingValue>(
+            valueListenable: controller,
+            builder: (_, v, __) => Text('${v.text.length} / $maxChars',
+                style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: v.text.length >= maxChars! ? p.err : p.sub)),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Reusable dropdown for any item type.
+class CampusDropdown<T> extends StatelessWidget {
+  final String label, hint;
+  final IconData icon;
+  final T? value;
+  final List<T> items;
+  final String Function(T) itemLabel;
+  final IconData Function(T)? itemIcon;
+  final String? Function(T?) validator;
+  final ValueChanged<T?> onChanged;
+  final FormFieldSetter<T> onSaved;
+
+  const CampusDropdown({
+    super.key,
+    required this.label,
+    required this.hint,
+    required this.icon,
+    required this.value,
+    required this.items,
+    required this.itemLabel,
+    required this.validator,
+    required this.onChanged,
+    required this.onSaved,
+    this.itemIcon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final p = Pal.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: DropdownButtonFormField<T>(
+        value: value,
+        isExpanded: true,
+        validator: validator,
+        onChanged: onChanged,
+        onSaved: onSaved,
+        dropdownColor: p.card,
+        borderRadius: BorderRadius.circular(kFieldRadius),
+        style: TextStyle(fontSize: 16, color: p.text),
+        icon: Icon(Icons.keyboard_arrow_down_rounded, color: p.sub),
+        decoration: campusDecoration(p, label: label, hint: hint, icon: icon),
+        // Menu rows show an icon + text; the closed field shows text only.
+        items: [
+          for (final i in items)
+            DropdownMenuItem<T>(
+              value: i,
+              child: Row(children: [
+                if (itemIcon != null) ...[Icon(itemIcon!(i), size: 20, color: p.main), const SizedBox(width: 12)],
+                Expanded(child: Text(itemLabel(i), overflow: TextOverflow.ellipsis)),
+              ]),
+            ),
+        ],
+        selectedItemBuilder: (_) => [
+          for (final i in items) Align(alignment: Alignment.centerLeft, child: Text(itemLabel(i), overflow: TextOverflow.ellipsis)),
+        ],
+      ),
+    );
+  }
+}
+
+/// Reusable single-choice chip group that is a real FormField (so validate, save and
+/// reset all work on it). Selected chips show a tick + thicker border, not colour alone.
+class ChipGroupField extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final List<ChipOpt> options;
+  final String? Function(String?) validator;
+  final ValueChanged<String?> onChanged;
+  final FormFieldSetter<String> onSaved;
+
+  const ChipGroupField({
+    super.key,
+    required this.label,
+    required this.icon,
+    required this.options,
+    required this.validator,
+    required this.onChanged,
+    required this.onSaved,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final p = Pal.of(context);
+    return FormField<String>(
+      validator: validator,
+      onSaved: onSaved,
+      builder: (state) => Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Icon(icon, size: 20, color: p.sub),
+            const SizedBox(width: 8),
+            Expanded(child: Text(label, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: p.text))),
+          ]),
+          const SizedBox(height: 10),
+          Wrap(spacing: 10, runSpacing: 10, children: [
+            for (final o in options)
+              ChoiceChip(
+                avatar: Icon(o.icon, size: 18, color: p.text),
+                label: Text(o.label, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: p.text)),
+                selected: state.value == o.label,
+                showCheckmark: true,
+                checkmarkColor: p.text,
+                selectedColor: o.color.withOpacity(.2),
+                backgroundColor: p.fill,
+                side: BorderSide(color: state.value == o.label ? o.color : (state.hasError ? p.err : p.line), width: state.value == o.label ? 2 : 1),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kFieldRadius)),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 11), // ≥ 44px touch target
+                onSelected: (_) {
+                  state.didChange(o.label);
+                  onChanged(o.label);
+                },
+              ),
+          ]),
+          if (state.hasError) _FieldError(state.errorText!),
+        ]),
+      ),
+    );
+  }
+}
+
+/// Error line with an icon, so errors never rely on colour alone.
+class _FieldError extends StatelessWidget {
+  final String text;
+  const _FieldError(this.text);
+  @override
+  Widget build(BuildContext context) {
+    final p = Pal.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(top: 8, left: 4),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Icon(Icons.error_outline_rounded, size: 17, color: p.err),
+        const SizedBox(width: 6),
+        Expanded(child: Text(text, style: TextStyle(color: p.err, fontWeight: FontWeight.w600, fontSize: 12.5, height: 1.3))),
+      ]),
+    );
+  }
+}
+
+/// Numbered card that groups related fields under a heading.
+class FormCard extends StatelessWidget {
+  final int step;
+  final String title, sub;
+  final IconData icon;
+  final List<Widget> children;
+  const FormCard({super.key, required this.step, required this.title, required this.sub, required this.icon, required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    final p = Pal.of(context);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.all(20),
+      decoration: cardBox(p, r: 24),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Container(
+            width: 44,
+            height: 44,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(color: p.soft, borderRadius: BorderRadius.circular(14)),
+            child: Icon(icon, color: p.main),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Step $step • $title', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17, color: p.text)),
+              const SizedBox(height: 2),
+              Text(sub, style: TextStyle(color: p.sub, fontSize: 13.5)),
+            ]),
+          ),
+        ]),
+        Padding(padding: const EdgeInsets.symmetric(vertical: 16), child: Divider(height: 1, color: p.line)),
+        ...children,
+      ]),
+    );
+  }
+}
+
+// ───────────── Data holders ─────────────
+/// Values written by each field's onSaved callback (only after validate() passes).
+class RequestDraft {
+  String name = '', studentId = '', email = '', phone = '', subject = '', description = '', extra = '';
+  String? category, urgency, contact, attachment;
+  DateTime? date;
+}
+
+class SentRequest {
+  final String ref, category, subject, urgency;
+  final DateTime date;
+  const SentRequest(this.ref, this.category, this.subject, this.urgency, this.date);
+}
+
+// ───────────── The page ─────────────
+class RequestPage extends StatefulWidget {
+  final Ctl c;
+  const RequestPage({super.key, required this.c});
+  @override
+  State<RequestPage> createState() => _RequestPageState();
+}
+
+class _RequestPageState extends State<RequestPage> {
+  // STATE: the key that identifies the Form and gives access to validate / save / reset.
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+
+  // Text controllers (disposed in dispose()).
+  final TextEditingController _nameCtl = TextEditingController();
+  final TextEditingController _idCtl = TextEditingController();
+  final TextEditingController _emailCtl = TextEditingController();
+  final TextEditingController _phoneCtl = TextEditingController();
+  final TextEditingController _extraCtl = TextEditingController();
+  final TextEditingController _subjectCtl = TextEditingController();
+  final TextEditingController _descCtl = TextEditingController();
+
+  // STATE: values that live outside the text controllers. Reset must clear these too.
+  String? _category, _urgency, _contact, _attachment;
+  DateTime? _date;
+  bool _agree = false;
+
+  final RequestDraft _draft = RequestDraft();
+  final List<SentRequest> _sent = [];
+
+  late final List<TextEditingController> _all = [_nameCtl, _idCtl, _emailCtl, _phoneCtl, _extraCtl, _subjectCtl, _descCtl];
+
+  @override
+  void initState() {
+    super.initState();
+    // Rebuild whenever any text changes so the progress bar stays live.
+    for (final t in _all) {
+      t.addListener(_refresh);
+    }
+  }
+
+  @override
+  void dispose() {
+    // Dispose every controller to avoid memory leaks.
+    for (final t in _all) {
+      t.removeListener(_refresh);
+      t.dispose();
+    }
+    super.dispose();
+  }
+
+  void _refresh() {
+    if (mounted) setState(() {});
+  }
+
+  ServiceCat? get _cat {
+    for (final s in serviceCats) {
+      if (s.name == _category) return s;
+    }
+    return null;
+  }
+
+  bool get _hasExtra => _cat != null && _cat!.extraLabel.isNotEmpty;
+
+  String? _vExtra(String? v) {
+    if ((v ?? '').trim().length < 3) return 'Please add the ${_cat?.extraLabel.toLowerCase() ?? 'detail'} (at least 3 characters).';
+    return null;
+  }
+
+  // PROGRESS: counts how many required items currently pass their validator.
+  List<bool> _checks() => [
+    vName(_nameCtl.text) == null,
+    vStudentId(_idCtl.text) == null,
+    vEmail(_emailCtl.text) == null,
+    _category != null,
+    if (_hasExtra) _vExtra(_extraCtl.text) == null,
+    vSubject(_subjectCtl.text) == null,
+    vDescription(_descCtl.text) == null,
+    _urgency != null,
+    _contact != null,
+    vDate(_date) == null,
+    _agree,
+  ];
+
+  // Fills the student details from the profile (sample data) to save typing.
+  void _useProfile() {
+    setState(() {
+      _nameCtl.text = kName;
+      _idCtl.text = kId;
+      _emailCtl.text = kEmail;
+    });
+    widget.c.snack('Student details filled from your profile');
+  }
+
+  // SUBMIT: validate first, save only if everything passes, then show feedback.
+  void _submit() {
+    final form = _formKey.currentState;
+    if (form == null) return;
+    FocusScope.of(context).unfocus();
+
+    if (!form.validate()) {
+      // Failed validation: stay on the form, keep every valid value, show errors beside fields.
+      widget.c.snack('Please fix the highlighted fields before submitting.');
+      return;
+    }
+    form.save(); // runs every onSaved callback and fills _draft
+
+    final d = _draft;
+    final now = DateTime.now();
+    final ref = 'REQ-${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}-${1000 + math.Random().nextInt(9000)}';
+    final sent = SentRequest(ref, d.category ?? '', d.subject, d.urgency ?? '', d.date ?? now);
+    setState(() => _sent.insert(0, sent));
+    _showSuccess(ref, d);
+  }
+
+  // RESET: reset the Form AND every piece of state that is not owned by the Form.
+  void _resetAll({bool silent = false}) {
+    _formKey.currentState?.reset(); // resets all FormFields (dropdown, chips, date, checkbox, text)
+    for (final t in _all) {
+      t.clear();
+    }
+    setState(() {
+      _category = _urgency = _contact = _attachment = null;
+      _date = null;
+      _agree = false;
+      _draft
+        ..name = ''
+        ..studentId = ''
+        ..email = ''
+        ..phone = ''
+        ..subject = ''
+        ..description = ''
+        ..extra = ''
+        ..category = null
+        ..urgency = null
+        ..contact = null
+        ..attachment = null
+        ..date = null;
+    });
+    if (!silent) widget.c.snack('Form cleared. You can start a new request.');
+  }
+
+  // Success feedback: dialog with a reference number and a summary of the request.
+  void _showSuccess(String ref, RequestDraft d) {
+    final first = d.name.trim().split(RegExp(r'\s+')).first;
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        final p = Pal.of(ctx);
+        Widget row(String k, String v) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 5),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            SizedBox(width: 100, child: Text(k, style: TextStyle(color: p.sub, fontWeight: FontWeight.w600, fontSize: 13.5))),
+            Expanded(child: Text(v, style: TextStyle(color: p.text, fontWeight: FontWeight.w700, fontSize: 14))),
+          ]),
+        );
+        return AlertDialog(
+          backgroundColor: p.card,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
+          title: Column(children: [
+            Container(
+              width: 64,
+              height: 64,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(color: p.ok.withOpacity(.15), shape: BoxShape.circle),
+              child: Icon(Icons.check_circle_rounded, color: p.ok, size: 40),
+            ),
+            const SizedBox(height: 14),
+            Text('Thanks, $first. Your request is on its way!', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20, color: p.text)),
+          ]),
+          content: SizedBox(
+            width: 420,
+            child: SingleChildScrollView(
+              child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(color: p.soft, borderRadius: BorderRadius.circular(kFieldRadius)),
+                  child: Column(children: [
+                    Text('REQUEST REFERENCE', style: TextStyle(color: p.sub, fontSize: 11.5, fontWeight: FontWeight.w800, letterSpacing: 1.4)),
+                    const SizedBox(height: 4),
+                    SelectableText(ref, style: TextStyle(color: p.main, fontSize: 22, fontWeight: FontWeight.w800, letterSpacing: .5)),
+                  ]),
+                ),
+                const SizedBox(height: 14),
+                row('Service', d.category ?? ''),
+                row('Subject', d.subject),
+                if (d.extra.isNotEmpty && _cat != null) row(_cat!.extraLabel, d.extra),
+                row('Urgency', d.urgency ?? ''),
+                row('Contact via', d.contact ?? ''),
+                row('Preferred date', d.date == null ? '' : fmtDate(d.date!)),
+                row('Student', '${d.name} (${d.studentId})'),
+                row('Email', d.email),
+                if (d.phone.isNotEmpty) row('Phone', d.phone),
+                if (d.attachment != null) row('Attachment', d.attachment!),
+                const SizedBox(height: 12),
+                Text('A confirmation was sent to your campus email. Staff usually reply within one working day.', style: TextStyle(color: p.sub, height: 1.45, fontSize: 13.5)),
+              ]),
+            ),
+          ),
+          actionsAlignment: MainAxisAlignment.center,
+          actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+          actions: [
+            FilledButton.icon(
+              style: FilledButton.styleFrom(backgroundColor: kPri, foregroundColor: Colors.white, minimumSize: const Size(200, 50), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kFieldRadius))),
+              onPressed: () => Navigator.of(ctx).pop(),
+              icon: const Icon(Icons.done_all_rounded),
+              label: const Text('Done', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15.5)),
+            ),
+          ],
+        );
+      },
+    ).then((_) {
+      // After the dialog closes, start a clean form for the next request.
+      if (mounted) _resetAll(silent: true);
+    });
+  }
+
+  // Mock attachment picker: no real files, just a list of sample file names.
+  void _pickAttachment() {
+    final p = Pal.of(context);
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+        decoration: BoxDecoration(color: p.card, borderRadius: const BorderRadius.vertical(top: Radius.circular(28))),
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Center(child: Container(width: 44, height: 5, decoration: BoxDecoration(color: p.line, borderRadius: BorderRadius.circular(3)))),
+          const SizedBox(height: 18),
+          Text('Choose a sample file', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: p.text)),
+          const SizedBox(height: 6),
+          Text('This is a demo picker. No file is uploaded.', style: TextStyle(color: p.sub, fontSize: 13.5)),
+          const SizedBox(height: 10),
+          for (final f in sampleFiles)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(f.endsWith('.pdf') ? Icons.picture_as_pdf_rounded : Icons.image_rounded, color: p.main),
+              title: Text(f, style: TextStyle(fontWeight: FontWeight.w700, color: p.text)),
+              onTap: () {
+                setState(() => _attachment = f);
+                Navigator.pop(ctx);
+              },
+            ),
+        ]),
+      ),
+    );
+  }
+
+  // Date picker rendered as a validated FormField (weekdays only, never in the past).
+  Widget _dateField() => FormField<DateTime>(
+    validator: vDate,
+    onSaved: (v) => _draft.date = v,
+    builder: (state) {
+      final p = Pal.of(context);
+      final today = _dateOnly(DateTime.now());
+      DateTime nextWeekday(DateTime d) {
+        var x = d;
+        while (x.weekday > 5) {
+          x = x.add(const Duration(days: 1));
+        }
+        return x;
+      }
+
+      Future<void> pick() async {
+        var initial = state.value ?? nextWeekday(today);
+        if (initial.isBefore(today)) initial = nextWeekday(today);
+        final picked = await showDatePicker(
+          context: context,
+          initialDate: initial,
+          firstDate: today,
+          lastDate: today.add(const Duration(days: 90)),
+          selectableDayPredicate: (d) => d.weekday <= 5,
+          helpText: 'Choose your preferred date',
+        );
+        if (picked != null) {
+          state.didChange(picked);
+          setState(() => _date = picked);
+        }
+      }
+
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(kFieldRadius),
+          onTap: pick,
+          child: InputDecorator(
+            isEmpty: state.value == null,
+            decoration: campusDecoration(p, label: 'Preferred date *', icon: Icons.event_available_rounded, helper: 'Appointments and replies are Monday to Friday.')
+                .copyWith(errorText: state.errorText, suffixIcon: Icon(Icons.arrow_drop_down_rounded, color: p.sub)),
+            child: Text(
+              state.value == null ? 'Tap to choose a date' : fmtDate(state.value!),
+              style: TextStyle(fontSize: 16, color: state.value == null ? p.sub : p.text),
+            ),
+          ),
+        ),
+      );
+    },
+  );
+
+  // Declaration checkbox as a FormField: submission is blocked until it is ticked.
+  Widget _declarationField() => FormField<bool>(
+    initialValue: false,
+    validator: vDeclaration,
+    builder: (state) {
+      final p = Pal.of(context);
+      return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Container(
+          decoration: BoxDecoration(
+            color: p.fill,
+            borderRadius: BorderRadius.circular(kFieldRadius),
+            border: Border.all(color: state.hasError ? p.err : p.line, width: state.hasError ? 1.5 : 1),
+          ),
+          child: CheckboxListTile(
+            value: state.value ?? false,
+            activeColor: kPri,
+            checkColor: Colors.white,
+            controlAffinity: ListTileControlAffinity.leading,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kFieldRadius)),
+            title: Text(
+              'I confirm the information above is correct and I agree that Campus Pulse staff may contact me about this request. *',
+              style: TextStyle(fontSize: 14.5, height: 1.4, color: p.text, fontWeight: FontWeight.w600),
+            ),
+            onChanged: (v) {
+              state.didChange(v);
+              setState(() => _agree = v ?? false);
+            },
+          ),
+        ),
+        if (state.hasError) _FieldError(state.errorText!),
+      ]);
+    },
+  );
+
+  Widget _pair(Widget a, Widget b) => LayoutBuilder(builder: (context, box) {
+    if (box.maxWidth > 520) {
+      return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Expanded(child: a), const SizedBox(width: 14), Expanded(child: b)]);
+    }
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [a, b]);
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final p = Pal.of(context);
+    final checks = _checks();
+    final done = checks.where((x) => x).length;
+    final total = checks.length;
+    final ready = done == total;
+
+    // Progress indicator card
+    final progress = Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(color: p.soft, borderRadius: BorderRadius.circular(20), border: Border.all(color: p.line)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Icon(ready ? Icons.check_circle_rounded : Icons.pending_actions_rounded, color: ready ? p.ok : p.main),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(ready ? 'All required items are complete. Ready to submit!' : '$done of $total required items complete',
+                style: TextStyle(color: p.text, fontWeight: FontWeight.w800, fontSize: 15)),
+          ),
+        ]),
+        const SizedBox(height: 12),
+        Semantics(
+          label: 'Form progress',
+          value: '$done of $total required items complete',
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(value: done / total, minHeight: 10, color: ready ? p.ok : kPri, backgroundColor: p.line),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Text('Fields marked * are required. The phone number is optional.', style: TextStyle(color: p.sub, fontSize: 13)),
+      ]),
+    );
+
+    // The Form: one key, autovalidate after user interaction, scrollable parent.
+    final form = Form(
+      key: _formKey,
+      autovalidateMode: AutovalidateMode.onUserInteraction,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        // ── Step 1: student details
+        FormCard(
+          step: 1,
+          title: 'Student details',
+          sub: 'Who is making this request?',
+          icon: Icons.badge_rounded,
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                style: TextButton.styleFrom(minimumSize: const Size(48, 44), foregroundColor: p.main),
+                onPressed: _useProfile,
+                icon: const Icon(Icons.auto_fix_high_rounded, size: 19),
+                label: const Text('Use my profile details', style: TextStyle(fontWeight: FontWeight.w700)),
+              ),
+            ),
+            const SizedBox(height: 6),
+            _pair(
+              CampusTextField(
+                controller: _nameCtl,
+                label: 'Full name *',
+                hint: 'e.g. Navadeep',
+                icon: Icons.person_outline_rounded,
+                capitalization: TextCapitalization.words,
+                validator: vName,
+                onSaved: (v) => _draft.name = (v ?? '').trim(),
+              ),
+              CampusTextField(
+                controller: _idCtl,
+                label: 'Student ID *',
+                hint: 'STU2024-1082',
+                icon: Icons.badge_outlined,
+                capitalization: TextCapitalization.characters,
+                autocorrect: false,
+                formatters: [FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9\-]')), LengthLimitingTextInputFormatter(12)],
+                validator: vStudentId,
+                onSaved: (v) => _draft.studentId = (v ?? '').trim().toUpperCase(),
+              ),
+            ),
+            CampusTextField(
+              controller: _emailCtl,
+              label: 'Campus email *',
+              hint: 'name$kEmailDomain',
+              icon: Icons.alternate_email_rounded,
+              keyboardType: TextInputType.emailAddress,
+              autocorrect: false,
+              validator: vEmail,
+              onSaved: (v) => _draft.email = (v ?? '').trim().toLowerCase(),
+            ),
+            CampusTextField(
+              controller: _phoneCtl,
+              label: 'Phone number (optional)',
+              hint: '+60 12-345 6789',
+              helper: 'Only used if you choose a phone call or text message.',
+              icon: Icons.phone_outlined,
+              keyboardType: TextInputType.phone,
+              formatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9+\- ]')), LengthLimitingTextInputFormatter(18)],
+              validator: vPhone,
+              onSaved: (v) => _draft.phone = (v ?? '').trim(),
+            ),
+          ],
+        ),
+
+        // ── Step 2: request details
+        FormCard(
+          step: 2,
+          title: 'Request details',
+          sub: 'What do you need help with?',
+          icon: Icons.support_agent_rounded,
+          children: [
+            CampusDropdown<String>(
+              label: 'Service category *',
+              hint: 'Choose a campus service',
+              icon: Icons.category_rounded,
+              value: _category,
+              items: [for (final s in serviceCats) s.name],
+              itemLabel: (s) => s,
+              itemIcon: (s) => serviceCats.firstWhere((x) => x.name == s).icon,
+              validator: vCategory,
+              onChanged: (v) => setState(() {
+                _category = v;
+                _extraCtl.clear(); // a different category needs a different extra detail
+              }),
+              onSaved: (v) => _draft.category = v,
+            ),
+            // ADVANCED 1: extra field appears only for categories that need it.
+            AnimatedSize(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeOut,
+              alignment: Alignment.topCenter,
+              child: _hasExtra
+                  ? CampusTextField(
+                controller: _extraCtl,
+                label: '${_cat!.extraLabel} *',
+                hint: _cat!.extraHint,
+                icon: _cat!.icon,
+                validator: _vExtra,
+                onSaved: (v) => _draft.extra = (v ?? '').trim(),
+              )
+                  : (_cat != null
+                  ? Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(color: p.soft, borderRadius: BorderRadius.circular(kFieldRadius), border: Border.all(color: p.line)),
+                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Icon(Icons.lock_outline_rounded, color: p.main, size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(child: Text('Counselling requests are private. Only the wellbeing team can read them.', style: TextStyle(color: p.text, fontSize: 13.5, height: 1.4))),
+                ]),
+              )
+                  : const SizedBox(width: double.infinity)),
+            ),
+            CampusTextField(
+              controller: _subjectCtl,
+              label: 'Request subject *',
+              hint: 'e.g. Cannot log in to the student portal',
+              icon: Icons.title_rounded,
+              capitalization: TextCapitalization.sentences,
+              maxChars: 80,
+              validator: vSubject,
+              onSaved: (v) => _draft.subject = (v ?? '').trim(),
+            ),
+            // ADVANCED 2: multiline description with live counter and a 300 character limit.
+            CampusTextField(
+              controller: _descCtl,
+              label: 'Request details *',
+              hint: 'Tell us what happened, where, and what you have already tried.',
+              helper: 'Between 20 and 300 characters.',
+              icon: Icons.notes_rounded,
+              keyboardType: TextInputType.multiline,
+              textInputAction: TextInputAction.newline,
+              capitalization: TextCapitalization.sentences,
+              minLines: 4,
+              maxLines: 6,
+              maxChars: 300,
+              validator: vDescription,
+              onSaved: (v) => _draft.description = (v ?? '').trim(),
+            ),
+            ChipGroupField(
+              label: 'Urgency *',
+              icon: Icons.speed_rounded,
+              options: urgencyOpts,
+              validator: vUrgency,
+              onChanged: (v) => setState(() => _urgency = v),
+              onSaved: (v) => _draft.urgency = v,
+            ),
+            // ADVANCED 6: mock attachment selector that shows the chosen file name.
+            Align(
+              alignment: Alignment.centerLeft,
+              child: _attachment == null
+                  ? OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48), side: BorderSide(color: p.line), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kFieldRadius))),
+                onPressed: _pickAttachment,
+                icon: Icon(Icons.attach_file_rounded, color: p.text, size: 20),
+                label: Text('Attach a file (optional)', style: TextStyle(color: p.text, fontWeight: FontWeight.w700)),
+              )
+                  : InputChip(
+                avatar: Icon(Icons.description_rounded, color: p.main, size: 18),
+                label: Text(_attachment!, style: TextStyle(color: p.text, fontWeight: FontWeight.w700)),
+                deleteIcon: const Icon(Icons.close_rounded, size: 18),
+                deleteButtonTooltipMessage: 'Remove attachment',
+                backgroundColor: p.soft,
+                side: BorderSide(color: p.line),
+                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+                onDeleted: () => setState(() => _attachment = null),
+              ),
+            ),
+          ],
+        ),
+
+        // ── Step 3: preferences
+        FormCard(
+          step: 3,
+          title: 'Preferences',
+          sub: 'How and when should we respond?',
+          icon: Icons.tune_rounded,
+          children: [
+            ChipGroupField(
+              label: 'Preferred contact method *',
+              icon: Icons.forum_outlined,
+              options: contactOpts,
+              validator: vContact,
+              onChanged: (v) => setState(() => _contact = v),
+              onSaved: (v) => _draft.contact = v,
+            ),
+            _dateField(),
+          ],
+        ),
+
+        // ── Step 4: confirmation + actions
+        FormCard(
+          step: 4,
+          title: 'Confirm & send',
+          sub: 'Review your answers, then submit.',
+          icon: Icons.verified_user_rounded,
+          children: [
+            _declarationField(),
+            const SizedBox(height: 20),
+            Row(children: [
+              Expanded(
+                flex: 3,
+                child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: kPri,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size.fromHeight(54),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kFieldRadius)),
+                  ),
+                  onPressed: _submit,
+                  icon: const Icon(Icons.send_rounded, size: 20),
+                  label: const Text('Submit request', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15.5)),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                flex: 2,
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: p.err,
+                    minimumSize: const Size.fromHeight(54),
+                    side: BorderSide(color: p.err.withOpacity(.7), width: 1.5),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kFieldRadius)),
+                  ),
+                  onPressed: _resetAll,
+                  icon: const Icon(Icons.restart_alt_rounded, size: 20),
+                  label: const Text('Reset', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15.5)),
+                ),
+              ),
+            ]),
+          ],
+        ),
+      ]),
+    );
+
+    // ADVANCED 5: the recent requests list shows what has been submitted this session.
+    Widget recent() => Container(
+      padding: const EdgeInsets.all(20),
+      decoration: cardBox(p, r: 24),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Icon(Icons.history_rounded, color: p.main),
+          const SizedBox(width: 10),
+          Text('Your recent requests', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17, color: p.text)),
+        ]),
+        const SizedBox(height: 12),
+        for (final r in _sent)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Row(children: [
+              Container(
+                width: 44,
+                height: 44,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(color: p.ok.withOpacity(.14), borderRadius: BorderRadius.circular(14)),
+                child: Icon(Icons.mark_email_read_rounded, color: p.ok, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(r.subject, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: p.text)),
+                  const SizedBox(height: 2),
+                  Text('${r.ref} • ${r.category} • ${fmtDate(r.date)}', maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: p.sub, fontSize: 12.5)),
+                ]),
+              ),
+              const SizedBox(width: 8),
+              Pill(r.urgency.split(' ').first.toUpperCase(), p.main),
+            ]),
+          ),
+      ]),
+    );
+
+    return SingleChildScrollView(
+      primary: false,
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      // Extra bottom padding keeps the last fields visible above the on-screen keyboard.
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        const PageBanner(
+          eyebrow: 'SERVICE REQUEST DESK',
+          title: 'Ask campus services',
+          sub: 'Fill in the four short steps and we will reply within one working day.',
+          icon: Icons.edit_note_rounded,
+          seed: 58,
+        ),
+        Section(
+          top: 36,
+          bottom: 48,
+          bg: p.alt,
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 760),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                progress,
+                const SizedBox(height: 20),
+                form,
+                if (_sent.isNotEmpty) recent(),
+              ]),
+            ),
+          ),
+        ),
+      ]),
+    );
+  }
+}
+
+// ═════════════════════════ PAGE 5: PROFILE ═════════════════════════
 class ProfilePage extends StatefulWidget {
   final Ctl c;
   const ProfilePage({super.key, required this.c});
@@ -1200,7 +2336,7 @@ class _ProfilePageState extends State<ProfilePage> {
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
             child: Column(children: [
               Divider(color: p.line),
-              info(Icons.mail_outline_rounded, 'navadeep@student.campuspulse.edu'),
+              info(Icons.mail_outline_rounded, kEmail),
               info(Icons.person_pin_rounded, 'Advisor: Dr. Lim'),
               info(Icons.place_outlined, 'Block A, Campus Level 2'),
               const SizedBox(height: 12),
@@ -1325,8 +2461,8 @@ class _ProfilePageState extends State<ProfilePage> {
         settingRow(Icons.notifications_rounded, kAcc, 'Notifications', 'Campus updates and deadlines',
             Switch(value: notifications, onChanged: (v) => setState(() => notifications = v)), () => setState(() => notifications = !notifications)),
         Divider(height: 1, color: p.line),
-        settingRow(Icons.support_agent_rounded, const Color(0xFF06B6D4), 'Help & support', 'Contact the Helpdesk', Icon(Icons.chevron_right_rounded, color: p.sub),
-                () => c.snack('Connecting you to the Helpdesk…')),
+        settingRow(Icons.support_agent_rounded, const Color(0xFF06B6D4), 'Help & support', 'Send a service request', Icon(Icons.chevron_right_rounded, color: p.sub),
+                () => c.go(3)), // opens the service request form
         Divider(height: 1, color: p.line),
         settingRow(Icons.logout_rounded, const Color(0xFFEF4444), 'Sign out', 'This is a demo, nothing will change', Icon(Icons.chevron_right_rounded, color: p.sub),
                 () => c.snack('Signed out (demo)')),
