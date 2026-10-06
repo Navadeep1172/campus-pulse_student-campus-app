@@ -1,0 +1,28 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "student-campus-app-c899d",
+          "appId": "1:864578290646:android:97ff06a584b0cd4e9b9a77",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "student-campus-app-c899d",
+          "configurations": {
+            "android": "1:864578290646:android:97ff06a584b0cd4e9b9a77",
+            "web": "1:864578290646:web:05db4d816602d1729b9a77"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "database": "(default)",
+    "location": "asia-southeast1",
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  }
+}

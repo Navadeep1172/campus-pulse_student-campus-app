@@ -1,0 +1,20 @@
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /campusRequests/{requestId} {
+
+      // Allow signed-in students to create requests for their own UID.
+      allow create: if request.auth != null
+                    && request.resource.data.ownerUid == request.auth.uid;
+
+      // Allow students to read only their own requests.
+      allow read: if request.auth != null
+                  && resource.data.ownerUid == request.auth.uid;
+
+      // Students cannot edit or delete submitted requests.
+      allow update, delete: if false;
+    }
+  }
+}
